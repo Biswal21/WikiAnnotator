@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 
 # Create your models here.
 
+
 class Language(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
@@ -13,14 +14,17 @@ class Language(models.Model):
     def __str__(self):
         return f"{self.name}({self.language_code})"
 
+
 class Project(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=511)
     article_name = models.CharField(max_length=255)
     language_id = models.ForeignKey(Language, on_delete=models.CASCADE)
     is_completed = models.BooleanField(default=False)
-    created_by = models.ForeignKey(User,related_name="Owner", on_delete=models.CASCADE)
-    annotated_by = models.ForeignKey(User,related_name="Annotator", on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, related_name="Owner", on_delete=models.CASCADE)
+    annotated_by = models.ForeignKey(
+        User, related_name="Annotator", on_delete=models.CASCADE
+    )
     modified_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
