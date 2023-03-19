@@ -47,8 +47,11 @@ services:
     image: postgres
     env_file:
       - .env.dev
+    volumes:
+      - db_vol:/var/lib/postgresql/data
 
 volumes:
+  db_vol:
   run_vol:
     driver_opts:
       type: tmpfs

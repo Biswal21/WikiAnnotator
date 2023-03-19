@@ -16,4 +16,7 @@ WORKDIR /src
 
 COPY . /src
 
+EXPOSE 8000
+
+RUN chown -R $USER:$USER .
 RUN chmod -R 777 /src
