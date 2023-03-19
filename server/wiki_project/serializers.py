@@ -24,6 +24,9 @@ class ProjectSerializer(serializers.ModelSerializer):
             "modified_at",
             "created_at",
         ]
+        extra_kwargs = {
+            "created_by": {"required": False},
+        }
 
 
 class SentenceSerializer(serializers.ModelSerializer):

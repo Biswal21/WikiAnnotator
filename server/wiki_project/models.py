@@ -36,7 +36,7 @@ class Sentence(models.Model):
     id = models.AutoField(primary_key=True)
     project_id = models.ForeignKey(Project, on_delete=models.CASCADE)
     original_sentence = models.TextField()
-    annotated_sentence = models.TextField()
+    annotated_sentence = models.TextField(null=True, blank=True)
     modified_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -40,12 +40,13 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField()
 
 
-# class RefreshTokenSerializer(serializers.Serializer):
-#     refresh_token = serializers.CharField()
+class RefreshTokenSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField()
 
 
-# class AccessTokenSerializer(serializers.Serializer):
-#     access_token = serializers.CharField()
+class TokenSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField()
+    access_token = serializers.CharField()
 
 
 class AuthenticationSuccessSerializer(serializers.Serializer):

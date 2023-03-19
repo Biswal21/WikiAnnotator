@@ -1,7 +1,10 @@
+from django.contrib.auth.models import User
 from .user_serializers import (
     # UserSerializer,
     AuthenticationSuccessSerializer,
     LoginSerializer,
+    RefreshTokenSerializer,
+    TokenSerializer,
 )
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
@@ -11,15 +14,9 @@ from rest_framework.decorators import action
 from drf_spectacular.utils import extend_schema
 from rest_framework_simplejwt.serializers import (
     TokenObtainPairSerializer,
-    TokenRefreshSerializer,
-)
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
 )
 
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 # from drf_spectacular.types import OpenApiTypes
 
@@ -89,22 +86,24 @@ class UserViewSet(viewsets.ViewSet):
                 status=status.HTTP_405_METHOD_NOT_ALLOWED,
             )
         serializer = TokenObtainPairSerializer(data=request.data)
+        # print(serializer.user)
         if serializer.is_valid():
-            user = serializer.validated_data["user"]
-            token = TokenObtainPairView.as_view()(request=request)._data
+            user = serializer.user
+            refresh = RefreshToken.for_user(user)
             groups = user.groups.values_list("name", flat=True)
             response = AuthenticationSuccessSerializer(
                 data={
-                    "access_token": token["access"],
-                    "refresh_token": token["refresh"],
+                    "access_token": str(serializer.validated_data["access"]),
+                    "refresh_token": str(refresh),
                     "groups": list(groups),
                 }
             )
-            return Response(response, status=status.HTTP_200_OK)
+            if response.is_valid():
+                return Response(response.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
-        request=TokenRefreshSerializer, responses={200: AuthenticationSuccessSerializer}
+        request=RefreshTokenSerializer, responses={200: AuthenticationSuccessSerializer}
     )
     @action(
         detail=False,
@@ -115,30 +114,47 @@ class UserViewSet(viewsets.ViewSet):
         ],
     )
     def refresh_token(self, request):
-        serialized_token = TokenRefreshSerializer(data=request.data)
+        serialized_refresh_token = RefreshTokenSerializer(data=request.data)
 
-        if serialized_token.is_valid():
+        if serialized_refresh_token.is_valid():
             try:
-                refresh = RefreshToken(serialized_token.validated_data["refresh"])
-                groups = refresh.user.groups.values_list("name", flat=True)
+                refresh = RefreshToken(
+                    serialized_refresh_token.validated_data["refresh_token"]
+                )
+                access = refresh.access_token
+                # groups = refresh.user.groups.values_list("name", flat=True)
+                try:
+                    access_token_body = AccessToken(str(access))
+                except Exception:
+                    return Response(
+                        {"error": "Internal server error"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+                user_id = access_token_body["user_id"]
+                user = User.objects.get(id=user_id)
+                groups = user.groups.values_list("name", flat=True)
+
                 print(groups)
-                token = TokenRefreshView.as_view()(request=request)._data
                 response = AuthenticationSuccessSerializer(
                     data={
-                        "access_token": token["access"],
-                        "refresh_token": token["refresh"],
+                        "refresh_token": str(refresh),
+                        "access_token": str(access),
                         "groups": list(groups),
                     }
                 )
-                return Response(response, status=status.HTTP_200_OK)
-            except Exception:
+                if response.is_valid():
+                    return Response(response.data, status=status.HTTP_200_OK)
+                return Response(response.errors, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
                 return Response(
-                    {"error": "Invalid token"},
+                    {"error": str(e)},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        return Response(serialized_token.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            serialized_refresh_token.errors, status=status.HTTP_400_BAD_REQUEST
+        )
 
-    @extend_schema(request=TokenObtainPairSerializer, responses={200})
+    @extend_schema(request=TokenSerializer, responses={200})
     @action(
         detail=False,
         methods=["post"],
@@ -148,35 +164,28 @@ class UserViewSet(viewsets.ViewSet):
         ],
     )
     def logout(self, request):
-        access_token = request.data.get("access_token")
-        refresh_token = request.data.get("refresh_token")
-
-        if not access_token and not refresh_token:
-            return Response(
-                {"error": "Please provide an access token or a refresh token."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        verify_view = TokenVerifyView.as_view()
-        verify_response = verify_view(request=request)
-
-        if verify_response.status_code == status.HTTP_200_OK:
-            if refresh_token:
-                blacklist_token = {"refresh": refresh_token}
-                blacklist_view = TokenRefreshView.as_view()
+        token = TokenSerializer(data=request.data)
+        if token.is_valid():
+            try:
+                refresh = RefreshToken(token.validated_data["refresh_token"])
+            except Exception:
+                refresh = None
+            try:
+                access = RefreshToken(token.validated_data["access_token"])
+            except Exception:
+                access = None
+            if refresh:
+                refresh.blacklist()
+            elif access:
+                access.blacklist()
             else:
-                blacklist_token = {"access": access_token}
-                blacklist_view = TokenObtainPairView.as_view()
-
-            blacklist_response = blacklist_view(request=request, data=blacklist_token)
-
-            if blacklist_response.status_code == 204:
                 return Response(
-                    {"success": "User logged out successfully."},
-                    status=status.HTTP_200_OK,
+                    {"error": "Invalid token"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        return Response(
-            {"error": "Unable to log out user."},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
+            return Response(
+                {"success": "User logged out successfully."},
+                status=status.HTTP_200_OK,
+            )
+        return Response(token.errors, status=status.HTTP_400_BAD_REQUEST)
