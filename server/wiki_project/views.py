@@ -5,7 +5,12 @@ from .serializers import (
     SentenceSerializer,
     DeleteSerializer,
     ProjectResponseSerializer,
+    ProjecListResponseSerializer,
 )
+
+# from .user_serializers import (
+#     UserSerializer,
+# )
 from .models import Project, Language, Sentence
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
@@ -36,7 +41,7 @@ class LanguageViewSet(viewsets.ViewSet):
         else:
             return Response(
                 data={"message": "You are not authorized to perform this action"},
-                status=status.HTTP_401_UNAUTHORIZED,
+                status=status.HTTP_403_FORBIDDEN,
             )
         serialized = LanguageSerializer(data=request.data, many=True)
         if serialized.is_valid():
@@ -103,7 +108,9 @@ class LanguageViewSet(viewsets.ViewSet):
                 data={"message": "Language does not exist"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        serialized = LanguageSerializer(instance=language, data=request.data)
+        serialized = LanguageSerializer(
+            instance=language, data=request.data, partial=True
+        )
         if serialized.is_valid():
             serialized.save()
             return Response(data=serialized.data, status=status.HTTP_200_OK)
@@ -199,7 +206,9 @@ class SentenceViewSet(viewsets.ViewSet):
                 data={"message": "Sentence does not exist"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        serialized = SentenceSerializer(instance=language, data=request.data)
+        serialized = SentenceSerializer(
+            instance=language, data=request.data, partial=True
+        )
         if serialized.is_valid():
             serialized.save()
             return Response(data=serialized.data, status=status.HTTP_200_OK)
@@ -232,14 +241,13 @@ class SentenceViewSet(viewsets.ViewSet):
 class ProjectViewSet(viewsets.ViewSet):
     @extend_schema(
         request=ProjectSerializer,
-        responses={201: ProjectSerializer},
+        responses={201: ProjecListResponseSerializer},
     )
     @action(
         detail=False, methods=["post"], url_path="create", permission_classes=[AllowAny]
     )
     def add_project(self, request):
         user = request.user
-        print("User from request:=======", user)
 
         try:
             allowed = user.groups.filter(name="Manager").exists()
@@ -250,7 +258,6 @@ class ProjectViewSet(viewsets.ViewSet):
             )
 
         if allowed:
-            # Todo; is user or user.id
             request.data["created_by"] = user.id
             serialized = ProjectSerializer(data=request.data)
             if serialized.is_valid():
@@ -270,7 +277,6 @@ class ProjectViewSet(viewsets.ViewSet):
                         {"error": "Article does not exist"},
                         status=status.HTTP_404_NOT_FOUND,
                     )
-                print("Summary:============", summary)
                 try:
                     segmenter = Segmenter(language="en", clean=False)
                     summary = segmenter.segment(summary)
@@ -279,7 +285,6 @@ class ProjectViewSet(viewsets.ViewSet):
                         {"error": "Cannot summarize the article"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     )
-                print("Segmented summary:============", summary)
                 project = serialized.save()
                 for sentence in summary:
                     if sentence != "":
@@ -296,12 +301,13 @@ class ProjectViewSet(viewsets.ViewSet):
                                 data=sentence_serialized.errors,
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             )
+                serialized = ProjecListResponseSerializer(instance=project)
                 return Response(data=serialized.data, status=status.HTTP_201_CREATED)
             return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(
                 {"error": "unauthorized, ask your manager to create a project"},
-                status=status.HTTP_401_UNAUTHORIZED,
+                status=status.HTTP_403_FORBIDDEN,
             )
 
     @extend_schema(
@@ -334,44 +340,13 @@ class ProjectViewSet(viewsets.ViewSet):
                 data={"message": "Project does not exist"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-
         try:
-            sentences = Sentence.objects.filter(project_id=pk)
+            serialized = ProjectResponseSerializer(instance=project)
+            return Response(data=serialized.data, status=status.HTTP_200_OK)
         except Exception:
             return Response(
-                {"message": "Internal Server Error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                data=serialized.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        sentence_serialized = SentenceSerializer(instance=sentences, many=True)
-
-        try:
-            language = Language.objects.get(id=project.language_id.id)
-        except Language.DoesNotExist:
-            return Response(
-                data={"message": "Internal Server Error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        print(language)
-        language_serialized = LanguageSerializer(instance=language)
-
-        data = {
-            "id": project.id,
-            "name": project.name,
-            "article_name": project.article_name,
-            "created_by": project.created_by.id,
-            "annotated_by": project.annotated_by.id,
-            "language": language_serialized.data,
-            "sentences": sentence_serialized.data,
-            "is_completed": project.is_completed,
-            "created_at": project.created_at,
-            "modified_at": project.modified_at,
-        }
-        serialized = ProjectResponseSerializer(data=data)
-        if serialized.is_valid():
-            return Response(data=serialized.data, status=status.HTTP_200_OK)
-        return Response(
-            data=serialized.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
 
     @extend_schema(
         responses={200: ProjectSerializer(many=True)},
@@ -385,24 +360,30 @@ class ProjectViewSet(viewsets.ViewSet):
         ],
     )
     def get_all_projects(self, request):
-        queryset = Project.objects.filter(
-            Q(created_by=request.user) | Q(annotated_by=request.user)
-        )
-
+        if request.user.is_authenticated:
+            queryset = Project.objects.filter(
+                Q(created_by=request.user) | Q(annotated_by=request.user)
+            ).order_by("-modified_at")
+        else:
+            return Response(
+                data={"message": "Unauthorized"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         try:
-            serialized = ProjectSerializer(instance=queryset, many=True)
+            serialized = ProjecListResponseSerializer(instance=queryset, many=True)
+            return Response(data=serialized.data, status=status.HTTP_200_OK)
         except Exception:
             return Response(
-                {"detail": "Serializer Error"},
+                serialized.errors,
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        return Response(data=serialized.data, status=status.HTTP_200_OK)
+        # return Response(data=serialized.data, status=status.HTTP_200_OK)
 
     @extend_schema(
         request=ProjectSerializer,
-        responses={200: ProjectSerializer},
+        responses={200: ProjecListResponseSerializer},
     )
-    @action(detail=True, methods=["put"], url_path="update")
+    @action(detail=False, methods=["patch"], url_path="update")
     def update_project(self, request):
         try:
             project_id = request.data["id"]
@@ -423,15 +404,19 @@ class ProjectViewSet(viewsets.ViewSet):
                 {"error": "forbidden"},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        serialized = ProjectSerializer(instance=project, data=request.data)
+        serialized = ProjectSerializer(
+            instance=project, data=request.data, partial=True
+        )
         if serialized.is_valid():
-            serialized.save()
+            project = serialized.save()
+            serialized = ProjecListResponseSerializer(instance=project)
             return Response(data=serialized.data, status=status.HTTP_200_OK)
+        print(serialized.errors)
         return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         parameters=[OpenApiParameter("id", OpenApiTypes.INT, OpenApiParameter.PATH)],
-        request=SentenceSerializer(many=True),
+        request=SentenceSerializer,
         responses={200: ProjectSerializer},
     )
     @action(detail=True, methods=["put"], url_path="sentences/update")
@@ -448,36 +433,40 @@ class ProjectViewSet(viewsets.ViewSet):
         else:
             return Response(
                 {"error": "Unauthorized to update project sentences"},
-                status=status.HTTP_401_UNAUTHORIZED,
+                status=status.HTTP_403_FORBIDDEN,
             )
         try:
-            project_sentences = Sentence.objects.filter(project_id=pk)
+            project_sentence = Sentence.objects.get(
+                project_id=pk, id=request.data["id"]
+            )
         except Sentence.DoesNotExist:
             return Response(
                 data={"message": "Internal server error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        serialized = SentenceSerializer(instance=project_sentences, data=request.data)
+        serialized = SentenceSerializer(
+            instance=project_sentence, data=request.data, partial=True
+        )
         if serialized.is_valid():
             serialized.save()
 
-            response_serialized = ProjectResponseSerializer(
-                data={
-                    "id": project.id,
-                    "name": project.name,
-                    "article_name": project.article_name,
-                    "language": project.language.id,
-                    "is_completed": project.is_completed,
-                    "created_by": project.created_by.id,
-                    "annotated_by": project.annotated_by.id,
-                    "sentences": serialized.data,
-                    "created_at": project.created_at,
-                    "updated_at": project.updated_at,
-                }
-            )
+            # response_serialized = ProjectResponseSerializer(
+            #     data={
+            #         "id": project.id,
+            #         "name": project.name,
+            #         "article_name": project.article_name,
+            #         "language": project.language.id,
+            #         "is_completed": project.is_completed,
+            #         "created_by": project.created_by.id,
+            #         "annotated_by": project.annotated_by.id,
+            #         "sentences": serialized.data,
+            #         "created_at": project.created_at,
+            #         "updated_at": project.updated_at,
+            #     }
+            # )
 
-            return Response(data=response_serialized.data, status=status.HTTP_200_OK)
+            return Response(data=serialized.data, status=status.HTTP_200_OK)
         return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -507,4 +496,5 @@ class ProjectViewSet(viewsets.ViewSet):
                 )
 
             return Response(data=request.data, status=status.HTTP_204_NO_CONTENT)
+        print(serialized.errors)
         return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)

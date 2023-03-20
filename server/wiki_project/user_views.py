@@ -1,17 +1,17 @@
 from django.contrib.auth.models import User
 from .user_serializers import (
-    # UserSerializer,
+    UserSerializer,
     AuthenticationSuccessSerializer,
     LoginSerializer,
     RefreshTokenSerializer,
     TokenSerializer,
 )
 from rest_framework import viewsets
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework_simplejwt.serializers import (
     TokenObtainPairSerializer,
 )
@@ -19,6 +19,15 @@ from rest_framework_simplejwt.serializers import (
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 # from drf_spectacular.types import OpenApiTypes
+import django_filters
+
+
+class UserFilter(django_filters.FilterSet):
+    group = django_filters.CharFilter(field_name="groups__name")
+
+    class Meta:
+        model = User
+        fields = ["group"]
 
 
 class UserViewSet(viewsets.ViewSet):
@@ -189,3 +198,40 @@ class UserViewSet(viewsets.ViewSet):
                 status=status.HTTP_200_OK,
             )
         return Response(token.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="group",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Filter users by group name",
+            )
+        ],
+        responses={200: UserSerializer(many=True)},
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="get",
+        permission_classes=[
+            AllowAny,
+        ],
+    )
+    def get_users(self, request):
+        users_filter = UserFilter(
+            request.GET, queryset=User.objects.all().order_by("username")
+        ).qs
+        serialized = UserSerializer(instance=users_filter, many=True)
+        return Response(serialized.data, status=status.HTTP_200_OK)
+
+    @extend_schema(responses={200: str})
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="test",
+        permission_classes=[IsAuthenticated],
+    )
+    def test(self, request):
+        return Response("OK", status=status.HTTP_200_OK)
