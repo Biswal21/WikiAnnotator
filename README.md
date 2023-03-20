@@ -57,9 +57,11 @@ docker-compose up
 5. Visit django-admin at
    development: `localhost:8000/admin/` production: `https://wiki-annot.fly.dev/admin/`
 6. Visit frontend at
-   developement: `localhost:3000` production: `https://main--gentle-caramel-659bd7.netlify.app/`
+   - Developement: `localhost:3000` 
+   - Production: [production](https://main--gentle-caramel-659bd7.netlify.app/)
 7. Visit API documentation at
-   development `localhost:8000/docs` production:`https://wiki-annot.fly.dev/docs/`
+   - Development `localhost:8000/docs`
+   - Production: [production admin](https://wiki-annot.fly.dev/docs/admin/)
 
 ## Note
 
