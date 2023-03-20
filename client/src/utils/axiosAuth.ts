@@ -8,8 +8,8 @@ import axios, { AxiosInstance } from "axios";
 import jwt_decode from "jwt-decode";
 import dayjs from "dayjs";
 
-// const baseURL = import.meta.env.VITE_API_URL;
-const baseURL = "http://localhost:8000/api";
+const baseURL = import.meta.env.VITE_API_URL;
+//const baseURL = "http://localhost:8000/api";
 
 let refresh = getRefreshTokenLS();
 
