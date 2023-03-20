@@ -11,3 +11,4 @@ flake8==6.0.0
 djangorestframework-simplejwt==5.2.2
 wikipedia-api==0.5.8
 pysbd==0.3.4
+django-filter==22.1

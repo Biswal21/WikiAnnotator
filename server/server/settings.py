@@ -30,6 +30,7 @@ SECRET_KEY = os.environ.get(
 DEBUG = bool(os.environ.get("DJANGO_DEBUG", default=True))
 
 ALLOWED_HOSTS = ["*"]
+CSRF_TRUSTED_ORIGINS = ["localhost", "https://wiki-annot.fly.dev"]
 
 
 # Application definition

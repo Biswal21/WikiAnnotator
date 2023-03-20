@@ -1,6 +1,26 @@
 version: "3"
 
 services:
+  client:
+    container_name: client
+    build: ./client
+    stdin_open: true
+    tty: true
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+    env_file:
+      - ./client/.env.local
+    command: >
+      sh -c "yarn && yarn run dev --host --port 3000"
+      
+    depends_on:
+      - server
+      - db
+
+
   server:
     container_name: server
     build:
@@ -17,31 +37,9 @@ services:
       - tmp_vol:/tmp
     env_file:
       - .env.dev
-    environment:
-      - DJANGO_DEBUG=False
-      - GUNICORN_WORKERS=5
     command: >
-      sh -c "sh migrations.sh && gunicorn -w 5 --reload -b 0.0.0.0:8000 --log-level info server.wsgi"
+      sh -c "sh migrations.sh && python manage.py runserver 0.0.0.0:8000"
     depends_on:
-      - db
-
-  client:
-    container_name: client
-    build: ./client
-    stdin_open: true
-    tty: true
-    working_dir: /src
-    ports:
-      - "3000:5173"
-    volumes:
-      - ./client:/src
-    env_file:
-      - .env.dev
-    command: >
-      sh -c "yarn install && yarn build && yarn start"
-      
-    depends_on:
-      - server
       - db
 
   db:
@@ -49,8 +47,11 @@ services:
     image: postgres
     env_file:
       - .env.dev
+    volumes:
+      - db_vol:/var/lib/postgresql/data
 
 volumes:
+  db_vol:
   run_vol:
     driver_opts:
       type: tmpfs
