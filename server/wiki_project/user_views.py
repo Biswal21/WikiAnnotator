@@ -86,7 +86,6 @@ class UserViewSet(viewsets.ViewSet):
         permission_classes=[
             AllowAny,
         ],
-        throttle_classes=[],
     )
     def login_verification(self, request):
         if request.user.is_authenticated:
@@ -168,9 +167,7 @@ class UserViewSet(viewsets.ViewSet):
         detail=False,
         methods=["post"],
         url_path="logout",
-        permission_classes=[
-            AllowAny,
-        ],
+        permission_classes=[IsAuthenticated],
     )
     def logout(self, request):
         token = TokenSerializer(data=request.data)
@@ -215,9 +212,7 @@ class UserViewSet(viewsets.ViewSet):
         detail=False,
         methods=["get"],
         url_path="get",
-        permission_classes=[
-            AllowAny,
-        ],
+        permission_classes=[IsAuthenticated],
     )
     def get_users(self, request):
         users_filter = UserFilter(

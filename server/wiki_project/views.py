@@ -13,7 +13,7 @@ from .serializers import (
 # )
 from .models import Project, Language, Sentence
 from rest_framework import viewsets
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
@@ -33,7 +33,10 @@ class LanguageViewSet(viewsets.ViewSet):
         responses={201: LanguageSerializer},
     )
     @action(
-        detail=False, methods=["post"], url_path="create", permission_classes=[AllowAny]
+        detail=False,
+        methods=["post"],
+        url_path="create",
+        permission_classes=[IsAuthenticated],
     )
     def add_languuage(self, request):
         if request.user.groups.filter(name="Manager").exists():
@@ -58,7 +61,7 @@ class LanguageViewSet(viewsets.ViewSet):
         methods=["get"],
         url_path="read",
         permission_classes=[
-            AllowAny,
+            IsAuthenticated,
         ],
     )
     def get_language(self, request, pk=None):
@@ -75,7 +78,12 @@ class LanguageViewSet(viewsets.ViewSet):
     @extend_schema(
         responses={200: LanguageSerializer(many=True)},
     )
-    @action(detail=False, methods=["get"], url_path="read")
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="read",
+        permission_classes=[IsAuthenticated],
+    )
     def get_all_languages(self, request):
         queryset = Language.objects.all()
 
@@ -92,7 +100,12 @@ class LanguageViewSet(viewsets.ViewSet):
         request=LanguageSerializer,
         responses={200: LanguageSerializer},
     )
-    @action(detail=True, methods=["put"], url_path="update")
+    @action(
+        detail=True,
+        methods=["put"],
+        url_path="update",
+        permission_classes=[IsAuthenticated],
+    )
     def update_language(self, request):
         try:
             lang_id = request.data["id"]
@@ -120,7 +133,12 @@ class LanguageViewSet(viewsets.ViewSet):
         request=DeleteSerializer,
         responses={204: DeleteSerializer},
     )
-    @action(detail=False, methods=["delete"], url_path="delete")
+    @action(
+        detail=False,
+        methods=["delete"],
+        url_path="delete",
+        permission_classes=[IsAuthenticated],
+    )
     def delete_languages(self, request):
         serialized = DeleteSerializer(data=request.data)
 
@@ -146,7 +164,10 @@ class SentenceViewSet(viewsets.ViewSet):
         responses={201: SentenceSerializer},
     )
     @action(
-        detail=False, methods=["post"], url_path="create", permission_classes=[AllowAny]
+        detail=False,
+        methods=["post"],
+        url_path="create",
+        permission_classes=[IsAuthenticated],
     )
     def add_sentence(self, request):
         serialized = SentenceSerializer(data=request.data, many=True)
@@ -158,7 +179,12 @@ class SentenceViewSet(viewsets.ViewSet):
     @extend_schema(
         responses={200: SentenceSerializer},
     )
-    @action(detail=True, methods=["get"], url_path="read")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="read",
+        permission_classes=[IsAuthenticated],
+    )
     def get_sentence(self, request, pk=None):
         try:
             sentence_obj = Sentence.objects.get(id=pk)
@@ -173,7 +199,12 @@ class SentenceViewSet(viewsets.ViewSet):
     @extend_schema(
         responses={200: LanguageSerializer(many=True)},
     )
-    @action(detail=False, methods=["get"], url_path="read")
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="read",
+        permission_classes=[IsAuthenticated],
+    )
     def get_all_sentences(self, request):
         queryset = Sentence.objects.all()
 
@@ -190,7 +221,12 @@ class SentenceViewSet(viewsets.ViewSet):
         request=SentenceSerializer,
         responses={200: SentenceSerializer},
     )
-    @action(detail=True, methods=["put"], url_path="update")
+    @action(
+        detail=True,
+        methods=["put"],
+        url_path="update",
+        permission_classes=[IsAuthenticated],
+    )
     def update_sentence(self, request):
         try:
             sentence_id = request.data["id"]
@@ -218,7 +254,12 @@ class SentenceViewSet(viewsets.ViewSet):
         request=DeleteSerializer,
         responses={204: DeleteSerializer},
     )
-    @action(detail=False, methods=["delete"], url_path="delete")
+    @action(
+        detail=False,
+        methods=["delete"],
+        url_path="delete",
+        permission_classes=[IsAuthenticated],
+    )
     def delete_sentences(self, request):
         serialized = DeleteSerializer(data=request.data)
 
@@ -244,7 +285,10 @@ class ProjectViewSet(viewsets.ViewSet):
         responses={201: ProjecListResponseSerializer},
     )
     @action(
-        detail=False, methods=["post"], url_path="create", permission_classes=[AllowAny]
+        detail=False,
+        methods=["post"],
+        url_path="create",
+        permission_classes=[IsAuthenticated],
     )
     def add_project(self, request):
         user = request.user
@@ -318,9 +362,7 @@ class ProjectViewSet(viewsets.ViewSet):
         detail=True,
         methods=["get"],
         url_path="read",
-        permission_classes=[
-            AllowAny,
-        ],
+        permission_classes=[IsAuthenticated],
     )
     def get_project_by_id(self, request, pk=None):
         try:
@@ -355,9 +397,7 @@ class ProjectViewSet(viewsets.ViewSet):
         detail=False,
         methods=["get"],
         url_path="read",
-        permission_classes=[
-            AllowAny,
-        ],
+        permission_classes=[IsAuthenticated],
     )
     def get_all_projects(self, request):
         if request.user.is_authenticated:
@@ -383,7 +423,12 @@ class ProjectViewSet(viewsets.ViewSet):
         request=ProjectSerializer,
         responses={200: ProjecListResponseSerializer},
     )
-    @action(detail=False, methods=["patch"], url_path="update")
+    @action(
+        detail=False,
+        methods=["patch"],
+        url_path="update",
+        permission_classes=[IsAuthenticated],
+    )
     def update_project(self, request):
         try:
             project_id = request.data["id"]
@@ -419,7 +464,12 @@ class ProjectViewSet(viewsets.ViewSet):
         request=SentenceSerializer,
         responses={200: ProjectSerializer},
     )
-    @action(detail=True, methods=["put"], url_path="sentences/update")
+    @action(
+        detail=True,
+        methods=["put"],
+        url_path="sentences/update",
+        permission_classes=[IsAuthenticated],
+    )
     def update_project_sentences(self, request, pk=None):
         try:
             project = Project.objects.get(id=pk)
@@ -451,21 +501,6 @@ class ProjectViewSet(viewsets.ViewSet):
         if serialized.is_valid():
             serialized.save()
 
-            # response_serialized = ProjectResponseSerializer(
-            #     data={
-            #         "id": project.id,
-            #         "name": project.name,
-            #         "article_name": project.article_name,
-            #         "language": project.language.id,
-            #         "is_completed": project.is_completed,
-            #         "created_by": project.created_by.id,
-            #         "annotated_by": project.annotated_by.id,
-            #         "sentences": serialized.data,
-            #         "created_at": project.created_at,
-            #         "updated_at": project.updated_at,
-            #     }
-            # )
-
             return Response(data=serialized.data, status=status.HTTP_200_OK)
         return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -473,7 +508,12 @@ class ProjectViewSet(viewsets.ViewSet):
         request=DeleteSerializer,
         responses={204: DeleteSerializer},
     )
-    @action(detail=False, methods=["delete"], url_path="delete")
+    @action(
+        detail=False,
+        methods=["delete"],
+        url_path="delete",
+        permission_classes=[IsAuthenticated],
+    )
     def delete_projects(self, request):
         if request.user.groups.filter(name="Manager").exists():
             pass
