@@ -61,7 +61,10 @@ docker-compose up
    - Production: [production](https://main--gentle-caramel-659bd7.netlify.app/)
 7. Visit API documentation at
    - Development `localhost:8000/docs`
-   - Production: [production admin](https://wiki-annot.fly.dev/docs/admin/)
+   - Production: [production docs](https://wiki-annot.fly.dev/docs/)
+8. Visit Server Admin
+   - Development: `localhost:8000/admin/`
+   - Production: `[production admin](https://wiki-annot.fly.dev/admin/) 
 
 ## Note
 
