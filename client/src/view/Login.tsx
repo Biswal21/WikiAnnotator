@@ -31,8 +31,8 @@ const Login: React.FC = () => {
       const isAuthed = await checkAuthentication();
       if (isAuthed) {
         navigate("/project");
-        setIsLoading(false);
       }
+      setIsLoading(false);
     };
 
     checkauth();
