@@ -211,7 +211,7 @@ const ProjectListView: React.FC = () => {
             <PopoverContent>
               <PopoverArrow />
               <PopoverCloseButton />
-              <PopoverHeader>Project Settings</PopoverHeader>
+              <PopoverHeader>Settings</PopoverHeader>
               <PopoverBody>
                 <Box cursor={"pointer"} onClick={handleLogOut}>
                   <HStack>
