@@ -122,6 +122,7 @@ const Login: React.FC = () => {
               </Stack>
             </form>
           </Box>
+          <Heading size="sm"  >user:admin, pass: admin</Heading>
         </Card>
       )}
     </Box>
